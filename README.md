@@ -2,6 +2,10 @@
 
 Dockerized Ruby Environment Boilerplate for Continuous Integration
 
+| CI SaaS | Status |
+|:-|:-|
+| CircleCI | [![CircleCI Build Status](https://circleci.com/gh/devops-playground/dreb4ci/tree/master.svg?style=shield)](https://circleci.com/gh/devops-playground/dreb4ci/tree/master) |
+
 ## Goals
 
 Sharing a common Ruby development and continuous integration (CI) container
@@ -14,7 +18,7 @@ for a remote Linux/OsX team and keep most of test & CI code in repository:
 * [x] local environment settings (HTTP proxy, processor count, etc.)
 * [x] local rc files if present (`~/.bashrc`, `~/.gitconfig`, `~/.inputrc`, `~/.nanorc`, `~/.tmux.conf` and `~/.vimrc`)
 * [x] minimal but useful remote pair programming toolset (**curl**, **git**, **gnupg**, **less**, **make**, **rsync**, **ssh**, **tmate**, **tmux** and **vim**)
-* [ ] speed up CI by rebuilding container on changes only (`Dockerfile`, new `master`)
+* [x] speed up CI by rebuilding container on changes only (`Dockerfile`, new `master`)
 * [x] [user namespaces isolation](https://docs.docker.com/engine/security/userns-remap) if present
 * [x] works on OsX (tested on **High Sierra** with [Docker for Mac](https://github.com/docker/for-mac))
 
