@@ -1,0 +1,41 @@
+--- 
+env:
+  global:
+    - DOCKER_USERNAME: vallar
+    # DOCKER_PASSWORD
+    - secure: rgIZaw1qMMkTnS8IULBGIeFsnoePNYnYaz4T27NhC0g9alGqFIVh+3IslM2c0EViKfCTGf6ZdIVYc8be70ovZSoUMqFoSH9ZxZtPmignwomBuWmv9mwEtyhhEC0ksck5JtHrNsn/AmimtG5OdGONfc9WhVO8eekKQADLL4oc74Tn1gLE3wGH0Ix99dFTO4iXa120/vnWZAv5f+QLqFAwTwygi8DMnm39Toj6ResvJ7avxLcdYfug1vq32a+MPCli9PXftZeKwtDQgR+iriYnOdZebgb5iNfXsRW8W2V3Vj0wzGmGmUTnEws7zqYolwFxfoambGRcMyjiJhc9+nlT0DrUtOBV+x1EGAWf2y02CZTTCxTdOVxAsWXnt3OzHKJbKA5vKCZC+/OS2ILtlRdm9K3UasryBHRkQO875gkwgIq3QS4wdHzezR35Vt9hvXikVwxm1JqmQyX5VR4IzY5fRcnUW5z/QhYe5h1NLM9Tn+btW88KlnIwoPJ6jWhh2JAbC3JOXBDNfPPLs+oNyWIhe5bzltoOweGRj5FJm/ssZMgCwUWnddl1yQd0c6N31K0SrhNnEgRjMgeZJLbu5ZiSMGU0WcdgjZuZ8nECs5cR/3bocT4exvC8A9UYUHR7CUxDsxIKKhF0NkaDQNnEbILVWWqcHeK8PT2VA9sfLPaSuBU=
+
+sudo: required
+
+dist: xenial
+
+language: ruby
+
+services:
+  - docker
+
+before_install:
+  - sudo apt-add-repository
+    "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+  - sudo apt-get update -q
+  - sudo apt-get install -o Dpkg::Options::="--force-confold" -y -q docker-ce
+  - git checkout ${TRAVIS_BRANCH}
+  - git branch -u origin/${TRAVIS_BRANCH}
+  - git config branch.${TRAVIS_BRANCH}.remote origin
+  - git config branch.${TRAVIS_BRANCH}.merge refs/heads/${TRAVIS_BRANCH}
+  - git config --unset remote.origin.fetch
+  - git config --add remote.origin.fetch +refs/heads/*:refs/remotes/origin/*
+  - git fetch origin master
+  - make pull_or_build_if_changed
+  - make push
+
+script:
+  - make pull
+  - make clean
+  - docker info
+  - id
+  - make test
+
+after_success:
+  - make pull_then_push_to_latest
+... 

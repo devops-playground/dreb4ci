@@ -6,6 +6,7 @@ Dockerized Ruby Environment Boilerplate for Continuous Integration
 |:-|:-|
 | CircleCI | [![CircleCI Build Status](https://circleci.com/gh/devops-playground/dreb4ci/tree/master.svg?style=shield)](https://circleci.com/gh/devops-playground/dreb4ci/tree/master) |
 | GitlabCI | [![Gitlab-CI Pipeline Status](https://gitlab.com/v41lzx/dreb4ci/badges/master/pipeline.svg)](https://gitlab.com/v41lzx/dreb4ci/commits/master) |
+| TravisCI | [![Travis-CI Build Status](https://travis-ci.org/devops-playground/dreb4ci.svg?branch=master)](https://travis-ci.org/devops-playground/dreb4ci) |
 
 ## Goals
 
