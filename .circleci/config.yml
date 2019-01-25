@@ -1,17 +1,16 @@
 ---
 version: 2
 
-docker_environment: &docker_environment
-  docker:
-    - image: docker:latest
-      environment:
-        DOCKER_USERNAME: v41lzx
-        PROJECT_NAME: dreb4ci
+common_environment: &common_environment
+  environment:
+    DOCKER_USERNAME: v41lzx
+    PROJECT_NAME: dreb4ci
+    WORKING_DIR: /root/project
 
-install_git_and_make: &install_git_and_make
-  run:
-    name: Install bash git make and ssh
-    command: apk add bash git make openssh-client
+docker_environment: &docker_environment
+  machine:
+    image: circleci/classic:201708-01
+    docker_layer_caching: true
 
 login_to_docker_registry: &login_to_docker_registry
   run:
@@ -32,12 +31,11 @@ fix_git_branches: &fix_git_branches
 
 jobs:
   build:
+    <<: *common_environment
     <<: *docker_environment
     steps:
-      - *install_git_and_make
       - checkout
       - *fix_git_branches
-      - setup_remote_docker
       - *login_to_docker_registry
       - run:
           name: Pull or build container if changed
@@ -47,12 +45,11 @@ jobs:
           command: make push
 
   test:
+    <<: *common_environment
     <<: *docker_environment
     steps:
-      - *install_git_and_make
       - checkout
       - *fix_git_branches
-      - setup_remote_docker
       - *login_to_docker_registry
       - run:
           name: Pull container
@@ -71,12 +68,11 @@ jobs:
           command: make test
 
   push:
+    <<: *common_environment
     <<: *docker_environment
     steps:
-      - *install_git_and_make
       - checkout
       - *fix_git_branches
-      - setup_remote_docker
       - *login_to_docker_registry
       - run:
           name: Pull then push to latest container
