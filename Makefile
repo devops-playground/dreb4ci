@@ -245,6 +245,44 @@ else
 	BUILD_OPTS :=
 endif
 
+# Handle specific Ruby release if needed
+RUBY_RELEASE := $(shell cat ${PWD}/.ruby-version 2> /dev/null || true)
+RUBY_TARBALL_SHA256 := \
+	$(shell cat ${PWD}/.ruby-tarball-sha256 2> /dev/null || true)
+
+ifneq ($(RUBY_RELEASE),)
+	RUBY_LEVEL := $(shell sed -e 's/\.[0-9]*$$/.0/' ${PWD}/.ruby-version)
+	CHRUBY_VERSION ?= 0.3.9
+	RUBY_INSTALL_VERSION ?= 0.7.0
+	RUBIES_TARBALL_CACHE_BASE_URL ?= http://rubies.free.fr
+
+	RUBY_ROOT := /opt/rubies/ruby-$(RUBY_RELEASE)
+	GEM_ROOT := $(RUBY_ROOT)/lib/ruby/gems/$(RUBY_LEVEL)
+	GEM_HOME := $(BUNDLE_PATH)/gems
+	GEM_PATH := $(GEM_HOME):$(GEM_ROOT)
+
+	PATH := $(GEM_HOME)/bin:$(RUBY_ROOT)/bin:/usr/local/bin:/usr/bin:/bin
+
+	CHRUBY_BUILD_ARGS := \
+		CHRUBY_VERSION \
+		RUBIES_TARBALL_CACHE_BASE_URL \
+		RUBY_INSTALL_VERSION \
+		RUBY_LEVEL \
+		RUBY_RELEASE \
+		RUBY_TARBALL_SHA256
+
+	CHRUBY_ENV_VARS := \
+		GEM_ROOT \
+		GEM_HOME \
+		GEM_PATH \
+		PATH \
+		RUBY_LEVEL \
+		RUBY_RELEASE
+endif
+
+$(foreach v,$(CHRUBY_BUILD_ARGS),$(eval $(call add_to_build_args,$v)))
+$(foreach v,$(CHRUBY_ENV_VARS),$(eval $(call add_to_env_vars,$v)))
+
 acl: .acl_build ## Add nested ACLs rights (need sudo)
 .acl_build: ${WRITABLE_DIRECTORIES} ${WRITABLE_FILES}
 	@if [ "$(USERNS)" = 'yes' ]; then \
@@ -309,7 +347,6 @@ clear-flags:
 clobber: FLAG = build
 clobber: clean rmi clear-flags ## Do clean, rmi, remove backup (*~) files
 	find . -type f -name \*~ -delete
-	rm -f Gemfile.lock
 
 help: ## Show this help
 	@printf '\033[32mtargets:\033[0m\n'
@@ -331,6 +368,7 @@ info: .build .acl_build ## Show Docker version and user id
 		$(call docker_run,,$(DOCKER_SUDO_S) docker info) ; \
 	fi
 	@$(call docker_run,,id)
+	@$(call docker_run,,ruby --version)
 
 login: ## Login to Docker registry
 	@echo "login to registry $(DOCKER_USERNAME) @ ${DOCKER_REGISTRY}"

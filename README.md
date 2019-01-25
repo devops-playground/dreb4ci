@@ -14,7 +14,7 @@ Sharing a common Ruby development and continuous integration (CI) container
 for a remote Linux/OsX team and keep most of test & CI code in repository:
 
 * [x] Bundler friendly (mounted `.bundle` with proper rights)
-* [ ] custom Ruby version via `.ruby-version` file
+* [x] custom Ruby version via `.ruby-version` file
 * [x] Debian based container
 * [x] dind (Docker-in-Docker) support for dockerized CI environment
 * [x] local environment settings (HTTP proxy, processor count, etc.)
@@ -52,6 +52,7 @@ targets:
 
 | Name | default | build-arg | env-var | description
 |:-|-|-|-|:-|
+| `CHRUBY_VERSION` | `0.3.9` | Y | N | [chruby](https://github.com/postmodern/chruby) release |
 | `CI` | | N | Y (if defined) | Continuous Integration flag |
 | `CIRCLECI` | | N | Y (if defined) | Circle CI flag |
 | `DEB_COMPONENTS` | see `Dockerfile` | Y (if defined) | N | Debian sources components |
@@ -75,6 +76,7 @@ targets:
 | `NB_PROC` | `$(nproc)` (Linux) or `sysctl -n hw.ncpu` (OsX) | Y | Y | Processor count |
 | `PROJECT_NAME` | `$(basename $(pwd))` | N | Y (`hostname`) | Container build tag project name part (`user_name/project_name:branch`) / container hostname |
 | `PROJECT_OWNER` | `${DOCKER_USERNAME}` | N | Y | Container build tag user name part (`user_name/project_name:branch`)  |
+| `RUBY_INSTALL_VERSION` | `0.7.0` | Y | N | [ruby-install](https://github.com/postmodern/ruby-install) release |
 | `TERM` | `${TERM}` | N | Y | Terminal name |
 | `TRAVIS` | | N | Y (if defined) | Travis CI flag |
 | `USERNS` | from `docker info` | N | Y (if defined) | Docker user namespace isolation flag |

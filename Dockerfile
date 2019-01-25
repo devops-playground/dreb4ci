@@ -19,15 +19,27 @@ ARG DEB_PACKAGES="\
 acl \
 apt-transport-https \
 bash-completion \
+bison \
 build-essential \
 ca-certificates \
+coreutils \
 curl \
 dirmngr \
 figlet \
 git-core \
 gnupg \
 less \
+libbison-dev \
+libffi-dev \
+libgdbm-dev \
+libncurses5-dev \
+libreadline-dev \
+libsigsegv2 \
+libssl-dev \
+libtinfo-dev \
+libyaml-dev \
 locales \
+m4 \
 make \
 man-db \
 ncurses-base \
@@ -36,12 +48,12 @@ openssh-client \
 procps \
 rsync \
 ruby \
-ruby-bundler \
 ruby-dev \
 sudo \
 tmate \
 tmux \
 vim-nox \
+zlib1g-dev \
 "
 ARG DEB_SECURITY_MIRROR_URL=http://security.debian.org
 
@@ -66,6 +78,14 @@ ENV LANG C.UTF-8
 
 # Fix TERM
 ENV TERM linux
+
+# Ruby env
+ARG RUBY_RELEASE=
+ARG RUBY_LEVEL=
+ARG CHRUBY_VERSION=
+ARG RUBY_INSTALL_VERSION=
+ARG RUBIES_TARBALL_CACHE_BASE_URL=
+ARG RUBY_TARBALL_SHA256=
 
 # Create and configure DOCKER_USER
 RUN groupadd -g "${DOCKER_USER_GID}" "${DOCKER_USER}" \
@@ -100,6 +120,9 @@ RUN echo "deb ${DEB_MIRROR_URL} ${DEB_DIST} ${DEB_COMPONENTS}" \
      fi \
   && apt update \
   && apt -y dist-upgrade \
+  && if [ "x${RUBY_RELEASE}" = 'x' ]; then \
+    DEB_PACKAGES="${DEB_PACKAGES} ruby-bundler"; \
+  fi \
   && apt install --no-install-recommends -y $DEB_PACKAGES \
   && apt -y autoremove \
   && apt clean \
@@ -169,6 +192,58 @@ RUN echo "deb ${DEB_DOCKER_URL} ${DEB_DIST} stable" \
   && if [ -f /etc/apt/apt.conf.d/11http-proxy ]; then \
        rm -f /etc/apt/apt.conf.d/11http-proxy; \
      fi
+
+# Install chruby
+RUN if [ -n "${RUBY_RELEASE}" ]; then \
+  curl -sL -o "/tmp/chruby-${CHRUBY_VERSION}.tar.gz" \
+  "https://github.com/postmodern/chruby/archive/v${CHRUBY_VERSION}.tar.gz" && \
+  tar -xzvf "/tmp/chruby-${CHRUBY_VERSION}.tar.gz" -C /tmp && \
+  cd "/tmp/chruby-${CHRUBY_VERSION}" && \
+  make install && \
+  echo 'source /usr/local/share/chruby/chruby.sh' \
+    >> /etc/profile.d/chruby.sh && \
+  echo 'source /usr/local/share/chruby/auto.sh' \
+    >> /etc/profile.d/chruby.sh ; \
+  fi
+
+# Install ruby-install
+RUN if [ -n "${RUBY_RELEASE}" -a -n "${RUBY_INSTALL_VERSION}" ]; then \
+  curl -sL -o "/tmp/ruby-install-${RUBY_INSTALL_VERSION}.tar.gz" \
+    "https://github.com/postmodern/ruby-install/archive/\
+v${RUBY_INSTALL_VERSION}.tar.gz" && \
+  tar -xzvf "/tmp/ruby-install-${RUBY_INSTALL_VERSION}.tar.gz" -C /tmp && \
+  cd "/tmp/ruby-install-${RUBY_INSTALL_VERSION}" && \
+  make install ; \
+  fi
+
+# Install Ruby
+RUN if [ -n "${RUBY_RELEASE}" -a -n "${RUBY_INSTALL_VERSION}" ]; then \
+  mkdir -p /opt/rubies && \
+  if curl -sL -o "/opt/rubies/ruby-${RUBY_RELEASE}.tar.xz" \
+    "${RUBIES_TARBALL_CACHE_BASE_URL}/ruby-${RUBY_RELEASE}.tar.xz"; then \
+    if [ "x${RUBY_TARBALL_SHA256}" = "x\
+$(sha256sum /opt/rubies/ruby-${RUBY_RELEASE}.tar.xz|cut -f1 -d\ )" ]; then \
+      tar --no-same-owner --owner=0 --group=0 \
+          -xJf "/opt/rubies/ruby-${RUBY_RELEASE}.tar.xz" \
+          -C /opt/rubies && \
+      rm -f "/opt/rubies/ruby-${RUBY_RELEASE}.tar.xz" ; \
+    else \
+      echo "/opt/rubies/ruby-${RUBY_RELEASE}.tar.xz has a wrong sha256!" >&2 ; \
+    fi ; \
+  fi ; \
+  if [ ! -x /opt/rubies/ruby-${RUBY_RELEASE}/bin/ruby ]; then \
+    /usr/local/bin/ruby-install \
+      -r /opt/rubies -c -j"${NB_PROC}" ruby "${RUBY_RELEASE}" ; \
+  fi ; \
+  /opt/rubies/ruby-${RUBY_RELEASE}/bin/gem uninstall \
+    -i /opt/rubies/ruby-${RUBY_RELEASE}/lib/ruby/gems/${RUBY_LEVEL}@global \
+    bundler && \
+  /opt/rubies/ruby-${RUBY_RELEASE}/bin/gem install bundler ; \
+fi
+
+# Autoload chruby
+COPY .bash_profile /home/${DOCKER_USER}/.bash_profile
+RUN chown ${DOCKER_USER}:${DOCKER_USER} /home/${DOCKER_USER}/.bashrc
 
 # Cleanups
 RUN apt-get -y autoremove && apt-get clean && rm -rf /tmp/* /var/tmp/*
