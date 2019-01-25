@@ -19,6 +19,7 @@ ARG DEB_PACKAGES="\
 acl \
 apt-transport-https \
 bash-completion \
+build-essential \
 ca-certificates \
 curl \
 dirmngr \
@@ -34,6 +35,9 @@ ncurses-term \
 openssh-client \
 procps \
 rsync \
+ruby \
+ruby-bundler \
+ruby-dev \
 sudo \
 tmate \
 tmux \

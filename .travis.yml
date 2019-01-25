@@ -34,6 +34,10 @@ script:
   - make clean
   - docker info
   - id
+  # Avoid "You must use Bundler 2 or greater with this lockfile." error
+  - rm -rf .bundle Gemfile.lock
+  - make bundle
+  - make run
   - make test
 
 after_success:

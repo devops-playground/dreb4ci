@@ -13,7 +13,7 @@ Dockerized Ruby Environment Boilerplate for Continuous Integration
 Sharing a common Ruby development and continuous integration (CI) container
 for a remote Linux/OsX team and keep most of test & CI code in repository:
 
-* [ ] Bundler friendly (mounted `.bundle` with proper rights)
+* [x] Bundler friendly (mounted `.bundle` with proper rights)
 * [ ] custom Ruby version via `.ruby-version` file
 * [x] Debian based container
 * [x] dind (Docker-in-Docker) support for dockerized CI environment
@@ -30,9 +30,11 @@ for a remote Linux/OsX team and keep most of test & CI code in repository:
 targets:
   acl             Add nested ACLs rights (need sudo)
   build           Build project container
-  clean           Clean acls
+  bundle          Run bundle for project
+  clean           Remove writable directories
   clobber         Do clean, rmi, remove backup (*~) files
   help            Show this help
+  idempotency     Test (bundle call) idempotency
   info            Show Docker version and user id
   login           Login to Docker registry
   logout          Logout from Docker registry
@@ -40,6 +42,7 @@ targets:
   push            Run 'docker push' with image
   rebuild-all     Clobber all, build and run test
   rmi             Remove project container
+  run             Run main.rb
   test-dind       Run 'docker run hello-world' within image
   test            Test (CI)
   usershell       Run user shell

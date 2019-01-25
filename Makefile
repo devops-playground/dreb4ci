@@ -3,8 +3,8 @@
 # Default task show help
 default: help
 
-.PHONY : clean clear-flags clobber info login logout pull \
-	pull_or_build_if_changed push push_if_changed rebuild-all rmi test \
+.PHONY : clean clear-flags clobber idempotency info login logout pull \
+	pull_or_build_if_changed push push_if_changed rebuild-all rmi run test \
 	test-dind usershell
 
 # Normal account inside container
@@ -39,6 +39,10 @@ PROJECT_OWNER ?= ${DOCKER_USERNAME}
 # Define working directory inside container
 WORKING_DIR ?= /src/${PROJECT_NAME}
 
+# Writable stuff inside container
+WRITABLE_DIRECTORIES := .bundle
+WRITABLE_FILES := Gemfile.lock
+
 # Define Docker build tag to project name if not set
 CURRENT_GIT_BRANCH = \
 	$(shell basename $$(git symbolic-ref --short HEAD || printf ''))
@@ -57,6 +61,8 @@ else
 	NB_PROC ?= $(shell nproc)
 endif
 
+BUNDLE_JOBS ?= ${NB_PROC}
+
 # Docker build arguments
 BUILD_ARGS = \
 	--build-arg "DOCKER_USER=${DOCKER_USER}" \
@@ -66,6 +72,9 @@ BUILD_ARGS = \
 
 # Docker run environment variables
 ENV_VARS = \
+	--env 'BUNDLE_DISABLE_SHARED_GEMS=true' \
+	--env "BUNDLE_PATH=${WORKING_DIR}/.bundle" \
+	--env "MAKEFLAGS=-j ${NB_PROC}" \
 	--env "MAKEFLAGS=-j ${NB_PROC}" \
 	--env container=docker \
 	--env LC_ALL=C.UTF-8
@@ -96,6 +105,7 @@ $(foreach v,$(OVERRIDABLE_BUILD_ARGS),$(eval $(call add_to_build_args,$v)))
 
 # Other overridable environment variables
 OVERRIDABLE_ENV_VARS := \
+	BUNDLE_JOBS \
 	CI \
 	CIRCLECI \
 	DOCKER_BUILD_TAG \
@@ -136,14 +146,17 @@ USERNS ?= $(shell \
 USER_UID := $(shell id -u)
 
 # Set privileged if no user namespace remap and run docker with sudo if not root
-DOCKER_SUDO :=
 DOCKER_SUDO_S :=
 ifneq ($(USERNS),yes)
-	DOCKER_SUDO_S := sudo -S
 	ifneq ($(USER_UID),0)
-		DOCKER_SUDO := sudo
+		DOCKER_SUDO_S := sudo -S
 	endif
-	USER_MODE_ARG += --privileged
+	USER_MODE_ARG = --privileged
+endif
+
+# Do not mount Docker daemon socket if DOCKER_HOST is set
+ifndef (DOCKER_HOST)
+	USER_MODE_ARG += --volume /var/run/docker.sock:/var/run/docker.sock:rw
 endif
 
 # Add overridable local rc files
@@ -164,14 +177,35 @@ endef
 
 $(foreach f,$(LOCAL_RC_FILES),$(eval $(call add_rc_file,$f)))
 
+# Create writable directories related rules
+define build_writable_directory
+${1}:
+	mkdir $$@
+endef
+
+$(foreach d,$(WRITABLE_DIRECTORIES),$(eval $(call build_writable_directory,$d)))
+
+# Create writable files related rules
+define touch_writable_file
+${1}:
+	touch $$@
+endef
+
+$(foreach f,$(WRITABLE_FILES),$(eval $(call touch_writable_file,$f)))
+
+WRITABLE_VOLUMES_ARGS := \
+	$(foreach p,\
+		$(WRITABLE_DIRECTORIES) $(WRITABLE_FILES),\
+		--volume ${PROJECT_ROOT}/$p:${WORKING_DIR}/$p:rw\
+	)
+
 # Define function to build Docker run command line
 define docker_cmd
-	${DOCKER_SUDO} docker run \
+	${DOCKER_SUDO_S} docker run \
 		--hostname ${PROJECT_NAME} \
 		--rm \
 		--workdir ${WORKING_DIR} \
 		--volume ${PROJECT_ROOT}:${WORKING_DIR}:ro \
-		--volume /var/run/docker.sock:/var/run/docker.sock:rw \
 		${USER_MODE_ARG} \
 		${ENV_VARS} \
 		${1} \
@@ -212,7 +246,7 @@ else
 endif
 
 acl: .acl_build ## Add nested ACLs rights (need sudo)
-.acl_build:
+.acl_build: ${WRITABLE_DIRECTORIES} ${WRITABLE_FILES}
 	@if [ "$(USERNS)" = 'yes' ]; then \
 		cmd='sudo setfacl -Rm g:$(DOCKER_USERNS_GROUP):rwX /var/run/docker.sock' \
 			&& printf "\n\033[31;1m$${cmd}\033[0m\n\n" \
@@ -223,6 +257,25 @@ acl: .acl_build ## Add nested ACLs rights (need sudo)
 			&& $${cmd} ; \
 		fi ; \
 	fi
+ifeq ($(USERNS),yes)
+	for dir in ${WRITABLE_DIRECTORIES}; do \
+		args="-Rm g:${DOCKER_USERNS_GROUP}:rwX ${PROJECT_ROOT}/$${dir}" ; \
+		printf "\033[31;1msudo setfacl $${args}\033[0m\n" ; \
+		sudo setfacl $${args} ; \
+	done
+	for file in ${WRITABLE_FILES}; do \
+		args="-m g:${DOCKER_USERNS_GROUP}:rwX ${PROJECT_ROOT}/$${file}" ; \
+		printf "\033[31;1msudo setfacl $${args}\033[0m\n" ; \
+		sudo setfacl $${args} ; \
+	done
+else
+	for dir in ${WRITABLE_DIRECTORIES}; do \
+		chmod a+rwX -R "${PROJECT_ROOT}/$${dir}" ; \
+	done ; \
+	for file in ${WRITABLE_FILES}; do \
+		chmod a+rw "${PROJECT_ROOT}/$${file}" ; \
+	done
+endif
 	touch .acl_build
 
 build: .build ## Build project container
@@ -231,9 +284,19 @@ build: .build ## Build project container
 		--cache-from $(DOCKER_BUILD_TAG) .
 	touch .build
 
-clean: FLAG = acl_build
-clean: clear-flags ## Clean acls
+bundle: .bundle_build ## Run bundle for project
+.bundle_build: .bundle Gemfile Gemfile.lock .acl_build .build
+	@$(call docker_run,${WRITABLE_VOLUMES_ARGS},bundle)
+	touch .acl_build
+	touch .bundle_build
+
+clean: FLAGS = acl_build bundle_build
+clean: clear-flags ## Remove writable directories
 	find . -type f -name \*~ -delete
+	rm -rf ${WRITABLE_DIRECTORIES} 2> /dev/null || ( \
+		printf "\033[31;1msudo rm -rf ${WRITABLE_DIRECTORIES}\033[0m\n" ; \
+		sudo rm -rf ${WRITABLE_DIRECTORIES} \
+	)
 
 clear-flags:
 	if [ -n "$(FLAG)" -a -f ".$(FLAG)" ]; then rm ".$(FLAG)"; fi
@@ -243,15 +306,21 @@ clear-flags:
 		done ; \
 	fi
 
-clobber: FLAGS = acl_build build
+clobber: FLAG = build
 clobber: clean rmi clear-flags ## Do clean, rmi, remove backup (*~) files
 	find . -type f -name \*~ -delete
+	rm -f Gemfile.lock
 
 help: ## Show this help
 	@printf '\033[32mtargets:\033[0m\n'
 	@grep -E '^[a-zA-Z _-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 	| sort \
 	| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n",$$1,$$2}'
+
+idempotency: ## Test (bundle call) idempotency
+	+make --no-print-directory bundle \
+		&& make --no-print-directory run \
+		&& test "$$(make --no-print-directory run | wc -l)" = 4
 
 info: MAKEFLAGS =
 info: .build .acl_build ## Show Docker version and user id
@@ -311,6 +380,9 @@ rebuild-all: ## Clobber all, build and run test
 	@make --no-print-directory clobber
 	@make --no-print-directory test
 
+run: bundle ## Run main.rb
+	@$(call docker_run,${WRITABLE_VOLUMES_ARGS},./main.rb)
+
 test-dind: .build .acl_build ## Run 'docker run hello-world' within image
 	@if [ -n "$(DOCKER_SUDO_S)" ]; then \
 		printf "${DOCKER_USER}\n\n" \
@@ -323,6 +395,7 @@ test: MAKEFLAGS =
 test: .build .acl_build ## Test (CI)
 	@make --no-print-directory info
 	@make --no-print-directory test-dind
+	@make --no-print-directory idempotency
 
 usershell: .build .acl_build ## Run user shell
-	$(call docker_run,-it --env SHELL=/bin/bash $(RC_ENV_VARS),/bin/bash --login)
+	@$(call docker_run,-it --env SHELL=/bin/bash $(RC_ENV_VARS),/bin/bash --login)
