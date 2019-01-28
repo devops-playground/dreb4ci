@@ -73,8 +73,8 @@ BUILD_ARGS = \
 # Docker run environment variables
 ENV_VARS = \
 	--env 'BUNDLE_DISABLE_SHARED_GEMS=true' \
+	--env "BUNDLE_JOBS=${NB_PROC}" \
 	--env "BUNDLE_PATH=${WORKING_DIR}/.bundle" \
-	--env "MAKEFLAGS=-j ${NB_PROC}" \
 	--env "MAKEFLAGS=-j ${NB_PROC}" \
 	--env container=docker \
 	--env LC_ALL=C.UTF-8
