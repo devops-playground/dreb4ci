@@ -20,6 +20,9 @@ default: help
 # Inotify wait time in second for auto tests
 AUTO_SLEEP ?= 2
 
+# Adjust Ruby MRI's standard glibc malloc behavior (close to jemalloc)
+MALLOC_MAX_ARENA ?= 2
+
 # Normal account inside container
 DOCKER_USER ?= dev
 DOCKER_USER_UID ?= 8888
@@ -88,7 +91,8 @@ ENV_VARS = \
 	--env 'BUNDLE_DISABLE_SHARED_GEMS=true' \
 	--env "BUNDLE_JOBS=${NB_PROC}" \
 	--env "BUNDLE_PATH=${WORKING_DIR}/.bundle" \
-	--env "MAKEFLAGS=-j ${NB_PROC}" \
+	--env "MAKEFLAGS=-j${NB_PROC}" \
+	--env "MALLOC_MAX_ARENA=${MALLOC_MAX_ARENA}" \
 	--env container=docker \
 	--env LC_ALL=C.UTF-8
 
