@@ -1,5 +1,8 @@
 # Makefile: make(1) build file.
 
+# Use bash shell
+SHELL := /bin/bash
+
 # Default task show help
 default: help
 
