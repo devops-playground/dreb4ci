@@ -37,11 +37,11 @@ DOCKER_INFO := $(shell docker info | tr "\n" '|')
 # Docker registry settings (credential should be set in environment)
 DOCKER_REGISTRY ?= $(shell \
 	echo "$(DOCKER_INFO)" \
-		| tr "\n" '|' \
-		| sed -e 's~^.*|Registry: \(https\?://[^|]*\)|.*$$~\1~g' \
+		| tr '|' "\n" \
+		| awk '/^ *Registry: / { print $$2; }' \
 	)
 DOCKER_REGISTRY_HOST ?= $(shell \
-	echo "${DOCKER_REGISTRY}" \
+	echo "$(DOCKER_REGISTRY)" \
 		| sed -e 's|^https\?://||' -e 's|/.*$$||' \
 	)
 DOCKER_USERNAME ?= dumb
@@ -157,8 +157,8 @@ USER_MODE_ARG := \
 # Check if user namespace is activated
 USERNS ?= $(shell \
 	echo "$(DOCKER_INFO)" \
-		| tr "\n" '|' \
-		| sed -e 's/^.*| userns|.*$$/yes/g' \
+		| tr '|' "\n" \
+		| awk '/^  ?userns$$/ { print "yes" }' \
 	)
 
 # Check if user is root
@@ -335,56 +335,61 @@ tty_notify_ok = printf "\033[1;49;92m$(PROJECT_NAME) $(1) passed\033[0m\n"
 tty_notify_fail = printf "\033[1;49;91m$(PROJECT_NAME) $(1) failed\033[0m\n"
 
 ifeq ($(has_inotify),Ok)
-	make_notify = \
-		( $(MAKE) --no-print-directory $(1) \
-			&& $(call tty_notify_ok,$(2)) && $(call notify_ok,$(2)) \
-			|| ( $(call tty_notify_fail,$(2)) && $(call notify_fail,$(2)); false ) )
+	exec_notify = \
+		( $(1) \
+			&& $(call tty_notify_ok,"$(2)") && $(call notify_ok,"$(2)") \
+			|| ( \
+				$(call tty_notify_fail,"$(2)") && $(call notify_fail,"$(2)"); \
+				false ) )
 else
-	make_notify = \
-		( $(MAKE) --no-print-directory $(1) \
-			&& $(call tty_notify_ok,$(2)) || ( $(call tty_notify_fail,$(2)); false ) )
+	exec_notify = \
+		( $(1) \
+			&& $(call tty_notify_ok,"$(2)") \
+			|| ( $(call tty_notify_fail,"$(2)"); false ) )
 endif
+
+define make_notify
+	$(call exec_notify,$(MAKE) --no-print-directory $(1),"$(2)")
+endef
 
 .%.png: .%.svg
 	convert -background none -resize 256x256 $< $@
 
 auto: ## Run tests suite continuously on writes
 	@+while true; do \
-		make --no-print-directory test && \
+		$(MAKE) --no-print-directory test && \
 			echo "⇒ \033[1;49;92mauto test done\033[0m, sleeping $(AUTO_SLEEP)s…"; \
 		sleep $(AUTO_SLEEP); \
 		$(call make_inotifywait); \
 	done
 
+define sudo
+	cmd="sudo ${1}" && printf "\n\033[31;1m$${cmd}\033[0m\n\n" && $${cmd}
+endef
+
+define add_writable_directories_acls
+	for dir in ${WRITABLE_DIRECTORIES}; do \
+		$(call sudo,setfacl -Rm u:${1}:rwX ${PROJECT_ROOT}/$${dir}) ; \
+	done
+endef
+
+define add_writable_files_acls
+	for file in ${WRITABLE_FILES}; do \
+		$(call sudo,setfacl -m u:${1}:rwX ${PROJECT_ROOT}/$${file}) ; \
+	done
+endef
+
 acl: .acl_build ## Add nested ACLs rights (need sudo)
 .acl_build: ${WRITABLE_DIRECTORIES} ${WRITABLE_FILES}
-	@if [ "$(USERNS)" = 'yes' ]; then \
-		cmd='sudo setfacl -Rm g:$(DOCKER_USERNS_GROUP):rwX /var/run/docker.sock' \
-			&& printf "\n\033[31;1m$${cmd}\033[0m\n\n" \
-			&& $${cmd} ; \
-		if [ "$(TMUX_CONF)" = 'Ok' ]; then \
-			cmd='sudo setfacl -Rm g:$(DOCKER_USERNS_GROUP):r $(HOME)/.tmux.conf' \
-			&& printf "\n\033[31;1m$${cmd}\033[0m\n\n" \
-			&& $${cmd} ; \
-		fi ; \
-	fi
 ifeq ($(USERNS),yes)
-	for dir in ${WRITABLE_DIRECTORIES}; do \
-		args="-Rm g:${DOCKER_USERNS_GROUP}:rwX ${PROJECT_ROOT}/$${dir}" ; \
-		printf "\033[31;1msudo setfacl $${args}\033[0m\n" ; \
-		sudo setfacl $${args} ; \
-	done
-	for file in ${WRITABLE_FILES}; do \
-		args="-m g:${DOCKER_USERNS_GROUP}:rwX ${PROJECT_ROOT}/$${file}" ; \
-		printf "\033[31;1msudo setfacl $${args}\033[0m\n" ; \
-		sudo setfacl $${args} ; \
-	done
+	$(call add_writable_directories_acls,$(DOCKER_USERNS_USER))
+	$(call add_writable_files_acls,$(DOCKER_USERNS_USER))
 else
 	for dir in ${WRITABLE_DIRECTORIES}; do \
-		chmod a+rwX -R "${PROJECT_ROOT}/$${dir}" ; \
+		chmod a+rwX -R "${PROJECT_ROOT}/$${dir}" 2> /dev/null; \
 	done ; \
 	for file in ${WRITABLE_FILES}; do \
-		chmod a+rw "${PROJECT_ROOT}/$${file}" ; \
+		chmod a+rw "${PROJECT_ROOT}/$${file}" 2> /dev/null; \
 	done
 endif
 	touch .acl_build
@@ -445,9 +450,9 @@ help: ## Show this help
 	| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n",$$1,$$2}'
 
 idempotency: ## Test (bundle call) idempotency
-	+make --no-print-directory bundle \
-		&& make --no-print-directory run \
-		&& test "$$(make --no-print-directory run | wc -l)" = 4
+	@+$(MAKE) --no-print-directory bundle \
+		&& $(MAKE) --no-print-directory run \
+		&& test "$$($(MAKE) --no-print-directory run | wc -l)" = 4
 
 info: MAKEFLAGS =
 info: .build .acl_build ## Show Docker version and user id
@@ -479,10 +484,12 @@ pull: ## Run 'docker pull' with image
 	touch .build
 
 pull_or_build_if_changed:
-	+if $(call dockerfile_changed); then \
-		make build; \
+	@+if $(call dockerfile_changed); then \
+		$(MAKE) --no-print-directory build; \
 	else \
-		( make login && make pull ) || make build ; \
+		( $(MAKE) --no-print-directory login \
+			&& $(MAKE) --no-print-directory pull ) \
+		|| $(MAKE) --no-print-directory build ; \
 	fi
 
 push: login .build ## Run 'docker push' with image
@@ -494,10 +501,10 @@ pull_then_push_to_latest: login
 		-a "x${CURRENT_GIT_BRANCH}" != 'xmaster' ]; then \
 			exit 0 ; \
 	fi
-	@make --no-print-directory pull
+	@$(MAKE) --no-print-directory pull
 	docker tag "$(DOCKER_REGISTRY_HOST)/${DOCKER_BUILD_TAG}" \
 		"${DOCKER_BUILD_TAG_BASE}:latest"
-	@DOCKER_BUILD_TAG="${DOCKER_BUILD_TAG_BASE}" make --no-print-directory push
+	@DOCKER_BUILD_TAG="${DOCKER_BUILD_TAG_BASE}" $(MAKE) --no-print-directory push
 
 rmi: FLAG = build
 rmi: clear-flags ## Remove project container
@@ -505,8 +512,8 @@ rmi: clear-flags ## Remove project container
 
 rebuild-all: MAKEFLAGS =
 rebuild-all: ## Clobber all, build and run test
-	@make --no-print-directory clobber
-	@make --no-print-directory test
+	@$(MAKE) --no-print-directory clobber
+	@$(MAKE) --no-print-directory test
 
 run: bundle ## Run main.rb
 	@$(call docker_run,${WRITABLE_VOLUMES_ARGS},./main.rb)
