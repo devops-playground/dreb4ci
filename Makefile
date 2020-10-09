@@ -84,6 +84,7 @@ BUILD_ARGS = \
 	--build-arg "DOCKER_USER=${DOCKER_USER}" \
 	--build-arg "DOCKER_USER_GID=${DOCKER_USER_GID}" \
 	--build-arg "DOCKER_USER_UID=${DOCKER_USER_UID}" \
+	--build-arg "MAKEFLAGS=-j${NB_PROC}" \
 	--build-arg "NB_PROC=${NB_PROC}"
 
 # Docker run environment variables
