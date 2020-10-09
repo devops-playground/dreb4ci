@@ -526,4 +526,5 @@ test: .build .acl_build ## Test (CI)
 	$(call make_notify,idempotency,idempotency)
 
 usershell: .build .acl_build ## Run user shell
-	@$(call docker_run,-it --env SHELL=/bin/bash $(RC_ENV_VARS),/bin/bash --login)
+	@$(call docker_run,$(WRITABLE_VOLUMES_ARGS) \
+		-it --env SHELL=/bin/bash $(RC_ENV_VARS),/bin/bash --login)
