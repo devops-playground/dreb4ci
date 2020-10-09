@@ -55,6 +55,9 @@ PROJECT_OWNER ?= ${DOCKER_USERNAME}
 # Define working directory inside container
 WORKING_DIR ?= /src/${PROJECT_NAME}
 
+# Define Ruby bundle path inside container
+BUNDLE_PATH := ${WORKING_DIR}/.bundle
+
 # Writable stuff inside container
 WRITABLE_DIRECTORIES := .bundle
 WRITABLE_FILES := Gemfile.lock
@@ -91,7 +94,7 @@ BUILD_ARGS = \
 ENV_VARS = \
 	--env 'BUNDLE_DISABLE_SHARED_GEMS=true' \
 	--env "BUNDLE_JOBS=${NB_PROC}" \
-	--env "BUNDLE_PATH=${WORKING_DIR}/.bundle" \
+	--env "BUNDLE_PATH=${BUNDLE_PATH}" \
 	--env "MAKEFLAGS=-j${NB_PROC}" \
 	--env "MALLOC_MAX_ARENA=${MALLOC_MAX_ARENA}" \
 	--env container=docker \
@@ -280,13 +283,17 @@ ifneq ($(RUBY_RELEASE),)
 
 	RUBY_ROOT := /opt/rubies/ruby-$(RUBY_RELEASE)
 	GEM_ROOT := $(RUBY_ROOT)/lib/ruby/gems/$(RUBY_LEVEL)
-	GEM_HOME := $(BUNDLE_PATH)/gems
+	GEM_HOME := $(BUNDLE_PATH)/ruby/$(RUBY_LEVEL)
 	GEM_PATH := $(GEM_HOME):$(GEM_ROOT)
 
 	PATH := $(GEM_HOME)/bin:$(RUBY_ROOT)/bin:/usr/local/bin:/usr/bin:/bin
 
+	BUNDLER_VERSION := \
+		$(strip $(shell tail -n 1 ${PWD}/Gemfile.lock 2> /dev/null || true))
+
 	CHRUBY_BUILD_ARGS := \
 		CHRUBY_VERSION \
+		BUNDLER_VERSION \
 		RUBIES_TARBALL_CACHE_BASE_URL \
 		RUBY_INSTALL_VERSION \
 		RUBY_LEVEL \
@@ -294,6 +301,7 @@ ifneq ($(RUBY_RELEASE),)
 		RUBY_TARBALL_SHA256
 
 	CHRUBY_ENV_VARS := \
+		BUNDLER_VERSION \
 		GEM_ROOT \
 		GEM_HOME \
 		GEM_PATH \
