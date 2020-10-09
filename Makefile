@@ -28,8 +28,8 @@ DOCKER_USER ?= dev
 DOCKER_USER_UID ?= 8888
 DOCKER_USER_GID ?= 8888
 
-# Valid subuid group identifier or name for user namespace restriction
-DOCKER_USERNS_GROUP ?= dock-g
+# Valid subuid user identifier or name for user namespace restriction
+DOCKER_USERNS_USER ?= dock-u
 
 # Get Docker info
 DOCKER_INFO := $(shell docker info | tr "\n" '|')

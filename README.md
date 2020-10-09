@@ -94,41 +94,43 @@ It's activated if `dockerd` provides it, given by `docker info` command. It can
 be desactivated by setting `USERNS` environment variable to anything but
 `yes` string.
 
-Please read [Isolate containers with a user namespace](https://docs.docker.com/engine/security/userns-remap/) to set a proper docker group remaping. Default remaping
-group is `dock-g` and can be overridden by setting `DOCKER_USERNS_GROUP`.
+Please read [Isolate containers with a user namespace](https://docs.docker.com/engine/security/userns-remap/) to set a proper docker group remaping.
+Default remaping user is `dock-u` and can be overridden by setting `DOCKER_USERNS_USER`.
 Example of working configuration for a `foo` account:
 
 * `/etc/passwd`
     ```
     # [...]
     foo:x:1000:1000:Foo account:/home/foo:/bin/bash
+    dockremap:x:100000:100000:Docker userns remap account:/nonexistent:/bin/false
+    dock-u:x:108888:108888:Docker userns account:/home/foo:/bin/bash
     # [...]
     ```
 * `/etc/group`
     ```
     # [...]
-    docker:x:888:foo
     foo:x:1000:
-    dock-g:x:108887:foo
+    dockremap:x:100000:
+    dock-g:x:108888:foo
     # [...]
     ```
 * `/etc/subuid`
     ```
     # [...]
-    foo:1000:1
-    foo:100000:65536
+    dock-u:100000:65536
+    foo:165536:65536
     # [...]
     ```
 
 * `/etc/subgid`
     ```
     # [...]
-    foo:888:1
-    foo:100000:65536
+    dock-g:100000:65536
+    foo:165536:65536
     # [...]
     ```
 
-Then run **dockerd** with valid user namespace parameter: `--userns-remap=foo`.
+Then run **dockerd** with valid user namespace parameter: `--userns-remap=dock-u:dock-g`.
 
 ## Development
 
