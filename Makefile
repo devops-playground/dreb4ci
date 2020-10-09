@@ -259,10 +259,12 @@ endef
 DOCKERD_EXPERIMENTAL := \
 	$(shell docker version --format '{{ .Server.Experimental }}')
 
+BUILD_OPTS :=
+
 ifeq ($(DOCKERD_EXPERIMENTAL),true)
+ifeq ($(CURRENT_GIT_BRANCH),master)
 	BUILD_OPTS := --squash
-else
-	BUILD_OPTS :=
+endif
 endif
 
 # Handle specific Ruby release if needed
