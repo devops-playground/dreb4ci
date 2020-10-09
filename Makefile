@@ -3,6 +3,13 @@
 # Use bash shell
 SHELL := /bin/bash
 
+# Load .env file if present (see sample env.default)
+ENVFILE := $(shell if [ -r .env ]; then echo 'true'; else echo 'false'; fi)
+ifeq ($(ENVFILE),true)
+	include .env
+	export $(shell sed 's/=.*//' .env | egrep -v '^\#')
+endif
+
 # Default task show help
 default: help
 
