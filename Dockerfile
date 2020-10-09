@@ -243,7 +243,7 @@ fi
 
 # Autoload chruby
 COPY .bash_profile /home/${DOCKER_USER}/.bash_profile
-RUN chown ${DOCKER_USER}:${DOCKER_USER} /home/${DOCKER_USER}/.bashrc
+RUN chown ${DOCKER_USER}:${DOCKER_USER} /home/${DOCKER_USER}/.bash_profile
 
 # Cleanups
 RUN apt-get -y autoremove && apt-get clean && rm -rf /tmp/* /var/tmp/*
