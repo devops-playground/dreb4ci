@@ -411,7 +411,7 @@ clean: clear-flags ## Remove writable directories
 	find ${PROJECT_ROOT}/. -type f -name \*~ -delete
 	for directory in ${WRITABLE_DIRECTORIES}; do \
 		path=${PROJECT_ROOT}/$${directory}; \
-		if [ -f $${path} ]; then \
+		if [ -d $${path} ]; then \
 			rm -rf $${path} 2> /dev/null || ( \
 				printf "\033[31;1msudo rm -rf $${directory}\033[0m\n" ; \
 				sudo rm -rf $${path} \
