@@ -404,7 +404,7 @@ build: .build ## Build project container
 
 bundle: .bundle_build ## Run bundle for project
 .bundle_build: .bundle Gemfile Gemfile.lock .acl_build .build
-	@$(call docker_run,${WRITABLE_VOLUMES_ARGS},bash -l -c bundle)
+	@$(call docker_run,-it --rm ${WRITABLE_VOLUMES_ARGS},bash -l -c bundle)
 	touch .acl_build
 	touch .bundle_build
 
@@ -459,8 +459,8 @@ idempotency: ## Test (bundle call) idempotency
 info: MAKEFLAGS =
 info: .build .acl_build ## Show Docker version and user id
 	@docker info
-	@$(call docker_run,,id)
-	@$(call docker_run,,ruby --version)
+	@$(call docker_run,-it --rm,id)
+	@$(call docker_run,-it --rm,bash -l -c "ruby --version")
 
 login: ## Login to Docker registry
 	@echo "login to registry $(DOCKER_USERNAME) @ ${DOCKER_REGISTRY}"
@@ -513,7 +513,7 @@ rebuild-all: ## Clobber all, build and run test
 	@$(MAKE) --no-print-directory test
 
 run: bundle ## Run main.rb
-	@$(call docker_run,${WRITABLE_VOLUMES_ARGS},bash -l -c ./main.rb)
+	@$(call docker_run,-it --rm ${WRITABLE_VOLUMES_ARGS},bash -l -c ./main.rb)
 
 test: MAKEFLAGS =
 test: .build .acl_build ## Test (CI)
@@ -522,4 +522,4 @@ test: .build .acl_build ## Test (CI)
 
 usershell: .build .acl_build ## Run user shell
 	@$(call docker_run,$(WRITABLE_VOLUMES_ARGS) \
-		-it --env SHELL=/bin/bash $(RC_ENV_VARS),/bin/bash --login)
+		-it --rm --env SHELL=/bin/bash $(RC_ENV_VARS),/bin/bash --login)
