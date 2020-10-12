@@ -461,6 +461,8 @@ info: .build .acl_build ## Show Docker version and user id
 	@docker info
 	@$(call docker_run,-it --rm,id)
 	@$(call docker_run,-it --rm,bash -l -c "ruby --version")
+	@$(call docker_run,-it --rm $(WRITABLE_VOLUMES_ARGS),\
+		bash -l -c "bundle --version")
 
 login: ## Login to Docker registry
 	@echo "login to registry $(DOCKER_USERNAME) @ ${DOCKER_REGISTRY}"
