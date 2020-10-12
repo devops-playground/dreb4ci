@@ -14,6 +14,12 @@ if [ -f /usr/local/share/chruby/chruby.sh \
   __status "chruby/auto $(chruby --version | cut -f 2 -d\ ) profile loaded."
 fi
 
+# prepend Ruby path if defined
+if [ -n "${RUBY_PATH}" ]; then
+  export PATH="${RUBY_PATH}:${PATH}"
+  __status "Ruby path (${RUBY_PATH}) prepended to \$PATH."
+fi
+
 # configure tmate with ephemeral key
 tmate_conf="${HOME}/.tmate.conf"
 if [ ! -f "${tmate_conf}" ]; then

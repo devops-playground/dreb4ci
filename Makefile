@@ -288,7 +288,7 @@ ifneq ($(RUBY_RELEASE),)
 	GEM_HOME := $(BUNDLE_PATH)/ruby/$(RUBY_LEVEL)
 	GEM_PATH := $(GEM_HOME):$(GEM_ROOT)
 
-	PATH := $(GEM_HOME)/bin:$(RUBY_ROOT)/bin:/usr/local/bin:/usr/bin:/bin
+	RUBY_PATH := $(GEM_HOME)/bin:$(RUBY_ROOT)/bin
 
 	BUNDLER_VERSION := \
 		$(strip $(shell tail -n 1 ${PWD}/Gemfile.lock 2> /dev/null || true))
@@ -307,8 +307,8 @@ ifneq ($(RUBY_RELEASE),)
 		GEM_ROOT \
 		GEM_HOME \
 		GEM_PATH \
-		PATH \
 		RUBY_LEVEL \
+		RUBY_PATH \
 		RUBY_RELEASE
 endif
 
@@ -404,7 +404,7 @@ build: .build ## Build project container
 
 bundle: .bundle_build ## Run bundle for project
 .bundle_build: .bundle Gemfile Gemfile.lock .acl_build .build
-	@$(call docker_run,${WRITABLE_VOLUMES_ARGS},bundle)
+	@$(call docker_run,${WRITABLE_VOLUMES_ARGS},bash -l -c bundle)
 	touch .acl_build
 	touch .bundle_build
 
@@ -518,7 +518,7 @@ rebuild-all: ## Clobber all, build and run test
 	@$(MAKE) --no-print-directory test
 
 run: bundle ## Run main.rb
-	@$(call docker_run,${WRITABLE_VOLUMES_ARGS},./main.rb)
+	@$(call docker_run,${WRITABLE_VOLUMES_ARGS},bash -l -c ./main.rb)
 
 test-dind: .build .acl_build ## Run 'docker run hello-world' within image
 	@if [ -n "$(DOCKER_SUDO_S)" ]; then \
