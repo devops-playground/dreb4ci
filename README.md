@@ -16,7 +16,6 @@ for a remote Linux/OsX team and keep most of test & CI code in repository:
 * [x] Bundler friendly (mounted `.bundle` with proper rights)
 * [x] custom Ruby version via `.ruby-version` file
 * [x] Debian based container
-* [x] dind (Docker-in-Docker) support for dockerized CI environment
 * [x] local environment settings (HTTP proxy, processor count, etc.)
 * [x] local rc files if present (`~/.bashrc`, `~/.gitconfig`, `~/.inputrc`, `~/.nanorc`, `~/.tmux.conf` and `~/.vimrc`)
 * [x] minimal but useful remote pair programming toolset (**curl**, **git**, **gnupg**, **less**, **make**, **rsync**, **ssh**, **tmate**, **tmux** and **vim**)
@@ -43,7 +42,6 @@ targets:
   rebuild-all     Clobber all, build and run test
   rmi             Remove project container
   run             Run main.rb
-  test-dind       Run 'docker run hello-world' within image
   test            Test (CI)
   usershell       Run user shell
 ```

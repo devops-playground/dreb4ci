@@ -458,12 +458,7 @@ idempotency: ## Test (bundle call) idempotency
 
 info: MAKEFLAGS =
 info: .build .acl_build ## Show Docker version and user id
-	@if [ -n "$(DOCKER_SUDO_S)" ]; then \
-		printf "${DOCKER_USER}\n\n" \
-		| $(call docker_run,--interactive,$(DOCKER_SUDO_S) docker info) ; \
-	else \
-		$(call docker_run,,$(DOCKER_SUDO_S) docker info) ; \
-	fi
+	@docker info
 	@$(call docker_run,,id)
 	@$(call docker_run,,ruby --version)
 
@@ -520,18 +515,9 @@ rebuild-all: ## Clobber all, build and run test
 run: bundle ## Run main.rb
 	@$(call docker_run,${WRITABLE_VOLUMES_ARGS},bash -l -c ./main.rb)
 
-test-dind: .build .acl_build ## Run 'docker run hello-world' within image
-	@if [ -n "$(DOCKER_SUDO_S)" ]; then \
-		printf "${DOCKER_USER}\n\n" \
-		| $(call docker_run,-i,$(DOCKER_SUDO_S) docker run hello-world) ; \
-	else \
-		$(call docker_run,,$(DOCKER_SUDO_S) docker run hello-world) ; \
-	fi
-
 test: MAKEFLAGS =
 test: .build .acl_build ## Test (CI)
 	@+$(call make_notify,info,info) && \
-	$(call make_notify,test-dind,test-dind) && \
 	$(call make_notify,idempotency,idempotency)
 
 usershell: .build .acl_build ## Run user shell
