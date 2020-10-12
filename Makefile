@@ -252,6 +252,8 @@ endef
 define dockerfile_changed
 	test -n "$$(git diff origin/master -- Dockerfile)" \
 		-o -n "$$(git diff HEAD~1 -- Dockerfile)" \
+		-o -n "$$(git diff origin/master -- .bash_profile)" \
+		-o -n "$$(git diff HEAD~1 -- .bash_profile)" \
 		-o -n "$$(git diff origin/master -- .ruby-tarball-sha256)" \
 		-o -n "$$(git diff HEAD~1 -- .ruby-tarball-sha256)" \
 		-o -n "$$(git diff origin/master -- .ruby-version)" \
