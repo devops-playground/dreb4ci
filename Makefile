@@ -272,6 +272,14 @@ ifeq ($(CURRENT_GIT_BRANCH),master)
 endif
 endif
 
+# TTY support Docker args
+GITLAB_CI ?=
+TTY_ARGS :=
+
+ifeq ($(GITLAB_CI),)
+	TTY_ARGS := -t
+endif
+
 # Handle specific Ruby release if needed
 RUBY_RELEASE := $(shell cat ${PWD}/.ruby-version 2> /dev/null || true)
 RUBY_TARBALL_SHA256 := \
@@ -404,7 +412,8 @@ build: .build ## Build project container
 
 bundle: .bundle_build ## Run bundle for project
 .bundle_build: .bundle Gemfile Gemfile.lock .acl_build .build
-	@$(call docker_run,-it --rm ${WRITABLE_VOLUMES_ARGS},bash -l -c bundle)
+	@$(call docker_run,\
+		-i $(TTY_ARGS) --rm ${WRITABLE_VOLUMES_ARGS},bash -l -c bundle)
 	touch .acl_build
 	touch .bundle_build
 
@@ -459,9 +468,9 @@ idempotency: ## Test (bundle call) idempotency
 info: MAKEFLAGS =
 info: .build .acl_build ## Show Docker version and user id
 	@docker info
-	@$(call docker_run,-it --rm,id)
-	@$(call docker_run,-it --rm,bash -l -c "ruby --version")
-	@$(call docker_run,-it --rm $(WRITABLE_VOLUMES_ARGS),\
+	@$(call docker_run,-i $(TTY_ARGS) --rm,id)
+	@$(call docker_run,-i $(TTY_ARGS) --rm,bash -l -c "ruby --version")
+	@$(call docker_run,-i $(TTY_ARGS) --rm $(WRITABLE_VOLUMES_ARGS),\
 		bash -l -c "bundle --version")
 
 login: ## Login to Docker registry
@@ -515,7 +524,8 @@ rebuild-all: ## Clobber all, build and run test
 	@$(MAKE) --no-print-directory test
 
 run: bundle ## Run main.rb
-	@$(call docker_run,-it --rm ${WRITABLE_VOLUMES_ARGS},bash -l -c ./main.rb)
+	@$(call docker_run,\
+		-i $(TTY_ARGS) --rm ${WRITABLE_VOLUMES_ARGS},bash -l -c ./main.rb)
 
 test: MAKEFLAGS =
 test: .build .acl_build ## Test (CI)
@@ -523,5 +533,5 @@ test: .build .acl_build ## Test (CI)
 	$(call make_notify,idempotency,idempotency)
 
 usershell: .bundle_build .build .acl_build ## Run user shell
-	@$(call docker_run,$(WRITABLE_VOLUMES_ARGS) \
-		-it --rm --env SHELL=/bin/bash $(RC_ENV_VARS),/bin/bash --login)
+	@$(call docker_run,--env SHELL=/bin/bash $(RC_ENV_VARS) \
+		-i $(TTY_ARGS) --rm $(WRITABLE_VOLUMES_ARGS),/bin/bash --login)
