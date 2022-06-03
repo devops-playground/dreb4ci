@@ -95,7 +95,7 @@ RUN groupadd -g "${DOCKER_USER_GID}" "${DOCKER_USER}" \
   && ( echo "${DOCKER_USER}:${DOCKER_USER}" | chpasswd ) \
   && echo 'gem: --no-ri --no-rdoc --no-document --suggestions' \
           > "/home/${DOCKER_USER}/.gemrc" \
-  && chown "${DOCKER_USER}.${DOCKER_USER}" "/home/${DOCKER_USER}/.gemrc"
+  && chown "${DOCKER_USER_UID}.${DOCKER_USER_GID}" "/home/${DOCKER_USER}/.gemrc"
 
 # Initialize sources.list & update all
 RUN echo "deb ${DEB_MIRROR_URL} ${DEB_DIST} ${DEB_COMPONENTS}" \
