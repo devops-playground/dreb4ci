@@ -7,7 +7,7 @@ env:
 
 sudo: required
 
-dist: buster
+dist: bullseye
 
 language: generic
 

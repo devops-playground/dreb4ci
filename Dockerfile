@@ -1,8 +1,8 @@
 # Dockerfile: docker(1) container build file.
 
-ARG DEB_DIST=buster
+ARG DEB_DIST=bullseye
 FROM debian:${DEB_DIST}
-ARG DEB_DIST=buster
+ARG DEB_DIST=bullseye
 
 LABEL maintainer="Laurent Vallar <val@zbla.net>"
 LABEL organization="DevOps Playground"
@@ -106,7 +106,7 @@ RUN echo "deb ${DEB_MIRROR_URL} ${DEB_DIST} ${DEB_COMPONENTS}" \
          >> /etc/apt/sources.list \
   && echo "deb ${DEB_MIRROR_URL} ${DEB_DIST}-backports ${DEB_COMPONENTS}" \
          >> /etc/apt/sources.list \
-  && echo "deb ${DEB_SECURITY_MIRROR_URL} ${DEB_DIST}/updates ${DEB_COMPONENTS}" \
+  && echo "deb ${DEB_SECURITY_MIRROR_URL} ${DEB_DIST}-security ${DEB_COMPONENTS}" \
          >> /etc/apt/sources.list \
   && sed -e 's|#\(precedence\s\s*::ffff:0:0/96\s\s*100\).*$|\1|' \
          -ri /etc/gai.conf \
