@@ -288,7 +288,7 @@ RUBY_TARBALL_SHA256 := \
 ifneq ($(RUBY_RELEASE),)
 	RUBY_LEVEL := $(shell sed -e 's/\.[0-9]*$$/.0/' ${PWD}/.ruby-version)
 	CHRUBY_VERSION ?= 0.3.9
-	RUBY_INSTALL_VERSION ?= 0.7.0
+	RUBY_INSTALL_VERSION ?= 0.8.3
 	RUBIES_TARBALL_CACHE_BASE_URL ?= http://rubies.free.fr
 
 	RUBY_ROOT := /opt/rubies/ruby-$(RUBY_RELEASE)
