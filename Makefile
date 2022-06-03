@@ -463,7 +463,7 @@ help: ## Show this help
 idempotency: ## Test (bundle call) idempotency
 	@+$(MAKE) --no-print-directory bundle \
 		&& $(MAKE) --no-print-directory run \
-		&& test "$$($(MAKE) --no-print-directory run | wc -l)" = 4
+		&& test "$$($(MAKE) --no-print-directory run 2>/dev/null | grep -v bash | wc -l)" = 2
 
 info: MAKEFLAGS =
 info: .build .acl_build ## Show Docker version and user id
